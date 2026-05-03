@@ -1,73 +1,281 @@
+/* --- Variables y Reset --- */
+:root {
+    --primary-blue: #0062ff;
+    --secondary-cyan: #00c6ff;
+    --sidebar-bg: #1e293b;
+    --sidebar-card-bg: #0f172a;
+    
+    --safe-bg: #dcfce7;
+    --safe-border: #22c55e;
+    --safe-text: #166534;
+    --safe-badge: #bbf7d0;
+
+    --danger-bg: #fee2e2;
+    --danger-border: #ef4444;
+    --danger-text: #991b1b;
+    --danger-badge: #fecaca;
+    
+    --text-light: #f8fafc;
+    --text-dim: #94a3b8;
+}
+
 * {
-    box-sizing: border-box;
     margin: 0;
     padding: 0;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', system-ui, sans-serif;
 }
 
 body {
-    background-color: #f4f7f6;
-    color: #333;
-}
-
-header {
-    background-color: #0056b3;
-    color: white;
-    padding: 20px;
-    text-align: center;
-}
-
-.contenedor-principal {
+    height: 100vh;
     display: flex;
-    flex-wrap: wrap;
-    max-width: 1200px;
-    margin: 20px auto;
-    gap: 20px;
-    padding: 0 15px;
+    flex-direction: column;
+    overflow: hidden; /* Evita scroll en toda la página */
+    background-color: #f1f5f9;
 }
 
-.seccion-mapa {
-    flex: 2;
-    min-width: 300px;
-    height: 500px; /* Altura fija para el mapa */
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    z-index: 1;
+/* --- Encabezado --- */
+.app-header {
+    background: linear-gradient(90deg, var(--primary-blue), var(--secondary-cyan));
+    color: white;
+    padding: 20px 30px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    z-index: 10;
 }
 
-.seccion-alertas {
+.header-content h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+}
+
+.header-content p {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin-top: 5px;
+}
+
+/* --- Layout Principal --- */
+.app-container {
+    display: flex;
     flex: 1;
-    min-width: 300px;
-    background-color: white;
+    overflow: hidden;
+}
+
+/* --- Mapa --- */
+.map-section {
+    flex: 7; /* 70% del ancho */
+    position: relative;
+    background-color: #cbd5e1;
+}
+
+.map-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+.markers-container {
+    position: absolute;
+    inset: 0;
+    pointer-events: none; /* Permite arrastrar el mapa debajo */
+}
+
+/* --- Panel Lateral (Sidebar) --- */
+.sidebar {
+    flex: 3; /* 30% del ancho */
+    background-color: var(--sidebar-bg);
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    border-left: 2px solid #334155;
+}
+
+.sidebar-title {
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+}
+
+.icon-warning {
+    color: #fbbf24;
+}
+
+.alerts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    flex: 1;
+}
+
+.loading-text {
+    color: var(--text-dim);
+    font-style: italic;
+}
+
+/* --- Tarjetas de Sensores --- */
+.sensor-card {
+    border-radius: 12px;
     padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    border-left: 6px solid;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    transition: transform 0.2s;
 }
 
-.alerta-item {
-    padding: 15px;
+.sensor-card:hover {
+    transform: translateX(-5px);
+}
+
+.sensor-card h3 {
+    font-size: 1.3rem;
     margin-bottom: 10px;
-    border-radius: 5px;
+}
+
+.sensor-card p {
+    font-size: 1rem;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
     font-weight: bold;
-    font-size: 1.1em;
+    margin: 5px 0;
 }
 
-/* Clases dinámicas de accesibilidad visual */
-.seguro {
-    background-color: #d4edda;
-    color: #155724;
-    border-left: 5px solid #28a745;
+/* Variantes de Tarjetas */
+.card-safe {
+    background-color: var(--safe-bg);
+    border-left-color: var(--safe-border);
+    color: var(--safe-text);
+}
+.card-safe .badge {
+    background-color: var(--safe-badge);
+    color: var(--safe-text);
 }
 
-.inundado {
-    background-color: #f8d7da;
-    color: #721c24;
-    border-left: 5px solid #dc3545;
+.card-danger {
+    background-color: var(--danger-bg);
+    border-left-color: var(--danger-border);
+    color: var(--danger-text);
+}
+.card-danger .badge {
+    background-color: var(--danger-badge);
+    color: var(--danger-text);
 }
 
-.texto-pequeno {
-    font-size: 0.85em;
-    color: #666;
-    margin-top: 20px;
-    text-align: center;
+/* --- Marcadores del Mapa --- */
+.map-marker {
+    position: absolute;
+    cursor: pointer;
+    pointer-events: auto;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
+
+.marker-icon {
+    position: absolute;
+    top: -30px;
+    width: 35px;
+    height: 35px;
+    background: white;
+    border-radius: 50%;
+    padding: 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    z-index: 2;
+}
+
+.marker-dot {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 3px solid white;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    position: relative;
+}
+
+/* Animación de pulso */
+.marker-dot::after {
+    content: '';
+    position: absolute;
+    inset: -10px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(0.5); opacity: 1; }
+    100% { transform: scale(2.5); opacity: 0; }
+}
+
+.marker-safe .marker-icon { color: var(--safe-border); }
+.marker-safe .marker-dot { background-color: var(--safe-border); }
+.marker-safe .marker-dot::after { background-color: rgba(34, 197, 94, 0.4); }
+
+.marker-danger .marker-icon { color: var(--danger-border); }
+.marker-danger .marker-dot { background-color: var(--danger-border); }
+.marker-danger .marker-dot::after { background-color: rgba(239, 68, 68, 0.4); }
+
+
+/* --- Leyenda --- */
+.legend {
+    margin-top: 30px;
+    padding: 20px;
+    background-color: var(--sidebar-card-bg);
+    border-radius: 10px;
+    color: var(--text-dim);
+}
+
+.legend h3 {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 15px;
+    color: var(--text-light);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    font-size: 0.95rem;
+}
+
+.legend-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid white;
+}
+.dot-safe { background-color: var(--safe-border); }
+.dot-danger { background-color: var(--danger-border); }
+
+/* --- Tooltip --- */
+.tooltip {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    border: 1px solid #e2e8f0;
+    pointer-events: none;
+    z-index: 50;
+    transition: opacity 0.2s;
+}
+.hidden { opacity: 0; }
+.tt-title { font-weight: bold; font-size: 1.1rem; margin-bottom: 5px;}
+.tt-text { color: #475569; font-size: 0.9rem; margin-bottom: 5px;}
+.tt-badge { font-weight: bold; font-size: 0.85rem;}

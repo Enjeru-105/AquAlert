@@ -1,101 +1,111 @@
-// Credenciales de ThingSpeak (Lectura)
-const CHANNEL_ID = '3365151';
-const READ_API_KEY = 'VVEWULW97F5B6FL9';
-const URL_THINGSPEAK = `https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?api_key=${READ_API_KEY}&results=1`;
-
-// Inicializar el Mapa de Leaflet centrado en Guadalajara
-const mapaGDL = L.map('mapa').setView([20.6596, -103.3496], 12);
-
-// Agregar la capa visual del mapa (OpenStreetMap es gratis)
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors'
-}).addTo(mapaGDL);
-
-// Diccionario de los 4 Nodos con sus coordenadas
-const nodos = {
-    plazaDelSol: { lat: 20.6489, lon: -103.4011, nombre: "Plaza del Sol" },
-    plazaPatria: { lat: 20.7121, lon: -103.3776, nombre: "Plaza Patria" },
-    washington: { lat: 20.6588, lon: -103.3562, nombre: "Paso Washington" },
-    zonaIndustrial: { lat: 20.6385, lon: -103.3444, nombre: "Zona Industrial" }
+// Coordenadas aproximadas para los pines en el iframe
+const positions = {
+    1: { x: 38, y: 65 }, // Plaza del Sol
+    2: { x: 30, y: 35 }, // Plaza Patria
+    3: { x: 60, y: 55 }, // Paso Washington
+    4: { x: 65, y: 75 }  // Zona Industrial
 };
 
-// Crear los marcadores en el mapa guardándolos en un objeto
-const marcadores = {
-    plazaDelSol: L.marker([nodos.plazaDelSol.lat, nodos.plazaDelSol.lon]).addTo(mapaGDL),
-    plazaPatria: L.marker([nodos.plazaPatria.lat, nodos.plazaPatria.lon]).addTo(mapaGDL),
-    washington: L.marker([nodos.washington.lat, nodos.washington.lon]).addTo(mapaGDL),
-    zonaIndustrial: L.marker([nodos.zonaIndustrial.lat, nodos.zonaIndustrial.lon]).addTo(mapaGDL)
-};
-
-// Función principal para obtener y procesar datos
-async function actualizarDashboard() {
+// Función principal de consumo
+async function fetchThingSpeakData() {
     try {
-        const respuesta = await fetch(URL_THINGSPEAK);
-        const datos = await respuesta.json();
-        
-        if (datos.feeds && datos.feeds.length > 0) {
-            const feed = datos.feeds[0];
-            const contenedorAlertas = document.getElementById('lista-alertas');
-            contenedorAlertas.innerHTML = ''; // Limpiar lista
-            
-            // Actualizar la fecha
-            const fechaDato = new Date(feed.created_at);
-            document.getElementById('ultima-actualizacion').innerText = 
-                `Última actualización: ${fechaDato.toLocaleTimeString()}`;
+        const response = await fetch('https://api.thingspeak.com/channels/3365151/feeds.json?results=1');
+        const json = await response.json();
 
-            // --- PROCESAR CADA NODO ---
-            
-            // Nodo 1: Plaza del Sol (Field 1 = cm, Field 2 = alerta)
-            actualizarUI(feed.field1, feed.field2, nodos.plazaDelSol, marcadores.plazaDelSol, contenedorAlertas);
-            
-            // Nodo 2: Plaza Patria (Field 3 = cm, Field 4 = alerta)
-            actualizarUI(feed.field3, feed.field4, nodos.plazaPatria, marcadores.plazaPatria, contenedorAlertas);
-            
-            // Nodo 3: Paso Washington (Field 5 = cm, Field 6 = alerta)
-            actualizarUI(feed.field5, feed.field6, nodos.washington, marcadores.washington, contenedorAlertas);
-            
-            // Nodo 4: Zona Industrial (Field 7 = cm, Field 8 = alerta)
-            actualizarUI(feed.field7, feed.field8, nodos.zonaIndustrial, marcadores.zonaIndustrial, contenedorAlertas);
+        if (json.feeds && json.feeds.length > 0) {
+            const ultimoDato = json.feeds[0];
 
+            const sensores = [
+                crearObjetoSensor(1, 'Plaza del Sol', ultimoDato.field1, ultimoDato.field2),
+                crearObjetoSensor(2, 'Plaza Patria', ultimoDato.field3, ultimoDato.field4),
+                crearObjetoSensor(3, 'Paso Washington', ultimoDato.field5, ultimoDato.field6),
+                crearObjetoSensor(4, 'Zona Industrial', ultimoDato.field7, ultimoDato.field8)
+            ];
+
+            actualizarInterfaz(sensores);
         }
     } catch (error) {
         console.error("Error conectando a ThingSpeak:", error);
+        document.getElementById('alerts-list').innerHTML = `<p class="loading-text" style="color: #ef4444;">Error de conexión.</p>`;
     }
 }
 
-// Función reutilizable para actualizar el Mapa y la Lista de cada nodo
-function actualizarUI(nivel_cm, estado_alerta, infoNodo, marcadorMapa, contenedorHTML) {
-    // Convertir los Strings de ThingSpeak a números enteros
-    const nivel = parseInt(nivel_cm) || 0; 
-    const alerta = parseInt(estado_alerta) || 0;
-    
-    // Crear el elemento para la lista
-    const divAlerta = document.createElement('div');
-    divAlerta.classList.add('alerta-item');
-    
-    let textoPopup = "";
-
-    if (alerta === 1) {
-        // Estado Inundado
-        divAlerta.classList.add('inundado');
-        divAlerta.innerHTML = `🚨 ${infoNodo.nombre}<br>Nivel: ${nivel} cm (INUNDADO)`;
-        textoPopup = `🚨 <b>${infoNodo.nombre}</b><br>Nivel: ${nivel} cm<br>¡EVITE LA ZONA!`;
-    } else {
-        // Estado Seguro
-        divAlerta.classList.add('seguro');
-        divAlerta.innerHTML = `✅ ${infoNodo.nombre}<br>Nivel: ${nivel} cm (Seguro)`;
-        textoPopup = `✅ <b>${infoNodo.nombre}</b><br>Nivel: ${nivel} cm<br>Tránsito libre`;
-    }
-
-    // Agregar a la lista HTML
-    contenedorHTML.appendChild(divAlerta);
-    
-    // Actualizar el texto del marcador en el mapa
-    marcadorMapa.bindPopup(textoPopup);
+function crearObjetoSensor(id, name, fieldNivel, fieldBandera) {
+    const nivel = parseInt(fieldNivel) || 0;
+    const hayAlerta = parseInt(fieldBandera) === 1;
+    return {
+        id: id,
+        name: name,
+        position: positions[id],
+        level: nivel,
+        alert: hayAlerta,
+        status: hayAlerta ? 'INUNDADO' : 'SEGURO',
+        message: hayAlerta ? 'Evite la zona' : 'Nivel normal'
+    };
 }
 
-// Ejecutar la función al cargar la página
-actualizarDashboard();
+function actualizarInterfaz(sensores) {
+    const markersContainer = document.getElementById('map-markers');
+    const alertsList = document.getElementById('alerts-list');
+    
+    markersContainer.innerHTML = '';
+    alertsList.innerHTML = '';
 
-// Actualizar automáticamente cada 30 segundos (ThingSpeak actualiza cada 15s)
-setInterval(actualizarDashboard, 30000);
+    sensores.forEach(sensor => {
+        // Asignar clases puras dependiendo del estado
+        const markerClass = sensor.alert ? 'marker-danger' : 'marker-safe';
+        const cardClass = sensor.alert ? 'card-danger' : 'card-safe';
+        const iconName = sensor.alert ? 'alert-triangle' : 'check-circle-2';
+
+        // 1. Inyectar Marcador
+        const markerHTML = `
+            <div class="map-marker ${markerClass}"
+                 style="left: ${sensor.position.x}%; top: ${sensor.position.y}%;"
+                 onmouseenter="mostrarTooltip('${sensor.name}', ${sensor.level}, '${sensor.status}', ${sensor.alert})"
+                 onmouseleave="ocultarTooltip()">
+                <i data-lucide="map-pin" class="marker-icon"></i>
+                <div class="marker-dot"></div>
+            </div>
+        `;
+        markersContainer.innerHTML += markerHTML;
+
+        // 2. Inyectar Tarjeta
+        const cardHTML = `
+            <div class="sensor-card ${cardClass}">
+                <h3>${sensor.name}</h3>
+                <p>Nivel: ${sensor.level} cm</p>
+                <div class="badge">
+                    <i data-lucide="${iconName}" style="width: 16px; height: 16px;"></i>
+                    ${sensor.status}
+                </div>
+                <p style="margin-top: 8px;">${sensor.message}</p>
+            </div>
+        `;
+        alertsList.innerHTML += cardHTML;
+    });
+
+    // Renderizar los iconos SVG de Lucide
+    lucide.createIcons();
+}
+
+// Control del Tooltip
+function mostrarTooltip(nombre, nivel, estado, alerta) {
+    const tt = document.getElementById('tooltip');
+    document.getElementById('tt-name').innerText = nombre;
+    document.getElementById('tt-level').innerText = `Nivel actual: ${nivel} cm`;
+    
+    const elStatus = document.getElementById('tt-status');
+    elStatus.innerText = estado;
+    elStatus.style.color = alerta ? 'var(--danger-border)' : 'var(--safe-border)';
+    
+    tt.classList.remove('hidden');
+}
+
+function ocultarTooltip() {
+    document.getElementById('tooltip').classList.add('hidden');
+}
+
+// Inicialización
+lucide.createIcons();
+fetchThingSpeakData();
+setInterval(fetchThingSpeakData, 15000);

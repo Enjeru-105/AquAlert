@@ -3,33 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AquAlert GDL - Monitoreo de Inundaciones</title>
-    <!-- Importar CSS de Leaflet (Librería de Mapas) -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <title>AquAlert GDL</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Iconos de Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
-    <header>
-        <h1>🌊 AquAlert GDL</h1>
-        <p>Monitoreo en Tiempo Real - Zona Metropolitana de Guadalajara</p>
+    <!-- Encabezado -->
+    <header class="app-header">
+        <div class="header-content">
+            <h1>AquAlert GDL</h1>
+            <p>Sistema IoT de Monitoreo de Inundaciones</p>
+        </div>
     </header>
 
-    <main class="contenedor-principal">
-        <!-- Contenedor del Mapa interactivo -->
-        <section id="mapa" class="seccion-mapa"></section>
-
-        <!-- Contenedor de la Lista de Alertas -->
-        <aside class="seccion-alertas">
-            <h2>🚨 Alertas Activas</h2>
-            <div id="lista-alertas">
-                <p>Cargando datos desde los sensores...</p>
+    <!-- Contenido Principal -->
+    <main class="app-container">
+        
+        <!-- Sección del Mapa -->
+        <section class="map-section">
+            <iframe
+                src="https://www.openstreetmap.org/export/embed.html?bbox=-103.45%2C20.63%2C-103.33%2C20.72&layer=mapnik&marker=20.6737%2C-103.3920"
+                class="map-iframe"
+                title="Mapa de Guadalajara">
+            </iframe>
+            
+            <!-- Contenedor dinámico de marcadores -->
+            <div id="map-markers" class="markers-container"></div>
+            
+            <!-- Tooltip -->
+            <div id="tooltip" class="tooltip hidden">
+                <p id="tt-name" class="tt-title"></p>
+                <p id="tt-level" class="tt-text"></p>
+                <p id="tt-status" class="tt-badge"></p>
             </div>
-            <p id="ultima-actualizacion" class="texto-pequeno"></p>
+        </section>
+
+        <!-- Panel Lateral (Sidebar) -->
+        <aside class="sidebar">
+            <h2 class="sidebar-title">
+                <i data-lucide="alert-triangle" class="icon-warning"></i>
+                Estado de Sensores
+            </h2>
+
+            <!-- Lista dinámica de tarjetas -->
+            <div id="alerts-list" class="alerts-list">
+                <p class="loading-text">Conectando con ThingSpeak...</p>
+            </div>
+
+            <!-- Leyenda Inferior -->
+            <div class="legend">
+                <h3>LEYENDA</h3>
+                <div class="legend-item">
+                    <div class="legend-dot dot-safe"></div>
+                    <span>Seguro (< 30 cm)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot dot-danger"></div>
+                    <span>Peligro (> 30 cm)</span>
+                </div>
+            </div>
         </aside>
     </main>
 
-    <!-- Importar JS de Leaflet y nuestro script -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
