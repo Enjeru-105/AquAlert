@@ -1,2 +1,0 @@
-Aquí se guardarán los archivos index.html, style.css, app.js y demás archivos respectivos al frontend:
-- Interfaz gráfica web
