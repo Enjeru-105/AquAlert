@@ -2,6 +2,10 @@
 #include <ThingSpeak.h>
 #include "config.h"
 
+// --- Configuración de Tiempos para Deep Sleep ---
+#define uS_TO_S_FACTOR 1000000ULL  
+#define TIME_TO_SLEEP  20
+
 // --- Tu WiFi ---
 const char* ssid = WIFI_SSID; 
 const char* password = WIFI_PASSWORD; 
@@ -11,13 +15,14 @@ unsigned long myChannelNumber = 3365151;
 const char * myWriteAPIKey = TS_WRITE_API_KEY;
 
 // --- Pines ---
-const int LED_VRD = 2; // Pin del LED Verde (Seguro)
-const int LED_RJO = 4; // Pin del Rojo (Alerta)
-const int BUZZ = 18; // Pin del Buzzer
 const int SENSOR_TRG = 16; // Pin Trigger del HC-SR04
 const int SENSOR_ECH = 17; // Pin Echo del HC-SR04
 const int DIP_1 = 32; // Pin 1 de minidip para comparación binaria
 const int DIP_2 = 33; // Pin 2 de minidip para comparación binaria
+// Pines GPIO Hold para bloquearlos en su estado y  no apagarlos al momento de hacer Deep Sleep
+const int LED_VRD = 2; // Pin del LED Verde (Seguro)
+const int LED_RJO = 4; // Pin del Rojo (Alerta)
+const int BUZZ = 15; // Pin del Buzzer
 
 // ======== Escala maqueta ========
 // el sensor teóricamente se coloca a 4 metros del suelo
@@ -37,18 +42,22 @@ WiFiClient client;
 void setup() {
   Serial.begin(115200);
 
+  // Descongelar Pines Al Despertar
+  // Cuando el ESP32 despierta, los pines siguen "bloqueados" en su último estado. 
+  // Hay que liberarlos para poder cambiar su valor si la inundación ya bajó.
+  gpio_hold_dis((gpio_num_t)LED_VRD);
+  gpio_hold_dis((gpio_num_t)LED_RJO);
+  gpio_hold_dis((gpio_num_t)BUZZ);
+  gpio_deep_sleep_hold_dis();
+
   pinMode(LED_VRD, OUTPUT);
   pinMode(LED_RJO, OUTPUT);
   pinMode(BUZZ, OUTPUT);
   pinMode(SENSOR_TRG, OUTPUT);
   pinMode(SENSOR_ECH, INPUT);
+
   pinMode(DIP_1, INPUT_PULLDOWN);
   pinMode(DIP_2, INPUT_PULLDOWN);
-
-  
-  digitalWrite(LED_VRD, LOW);
-  digitalWrite(LED_RJO, LOW);
-  digitalWrite(BUZZ, LOW);
 
   // Conexión WiFi
   Serial.print("Conectando a WiFi...");
@@ -61,15 +70,11 @@ void setup() {
   
   // Iniciar cliente ThingSpeak
   ThingSpeak.begin(client);
+  esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
 }
 
 void loop() {
-  // Apagamos todo por si hay un cambio de monitorización
-  digitalWrite(LED_VRD, LOW);
-  digitalWrite(LED_RJO, LOW);
-  digitalWrite(BUZZ, LOW);
-
-  // Leer el estado de los pines
+  // Leer el estado de los pines del DIP switch
   int estado_dip1 = digitalRead(DIP_1);
   int estado_dip2 = digitalRead(DIP_2);
 
@@ -113,10 +118,12 @@ void loop() {
     digitalWrite(LED_VRD, LOW); // Apaga Seguro
     digitalWrite(LED_RJO, HIGH); // Enciende Alerta
     digitalWrite(BUZZ, HIGH); // Enciende Alarma
+    Serial.println("Estado: PELIGRO");
   }else{
     digitalWrite(LED_RJO, LOW); // Apaga Alerta
     digitalWrite(BUZZ, LOW); // Apaga Alarma
     digitalWrite(LED_VRD, HIGH); // Enciende Seguro
+    Serial.println("Estado: SEGURO");
   }
 
   // Preparar paquete de ThingSpeak dinámico
@@ -132,7 +139,14 @@ void loop() {
     Serial.println("Error enviando datos. Código HTTP: " + String(codigoHTTP));
   }
 
-  // Pausa vital para no saturar ThingSpeak (20 segundos)
-  Serial.println("Esperando 20 segundos para la siguiente lectura...\n");
-  delay(20000);
+  // CONGELAR PINES (Flip-Flop por Software)
+  // Le digo al ESP32 que mantenga estos pines en su estado actual durante el Deep Sleep
+  gpio_hold_en((gpio_num_t)LED_VRD);
+  gpio_hold_en((gpio_num_t)LED_RJO);
+  gpio_hold_en((gpio_num_t)BUZZ);
+  gpio_deep_sleep_hold_en(); // Habilita la retención global durante el sueño
+
+  Serial.println("Durmiendo por 20 segundos hasta la siguiente lectura");
+  Serial.flush(); 
+  esp_deep_sleep_start();
 }
