@@ -1,5 +1,5 @@
 #include <WiFi.h>
-#include <ThingSpeak.h>
+#include <HTTPClient.h>
 #include "config.h"
 #include <WiFiClientSecure.h>
 
@@ -7,12 +7,11 @@
 #define uS_TO_S_FACTOR 1000000ULL  
 #define TIME_TO_SLEEP  20
 
-// --- Tu WiFi ---
+// --- Señal WiFi ---
 const char* ssid = WIFI_SSID; 
 const char* password = WIFI_PASSWORD; 
 
-// --- Tu Canal "IoT Prtuebas" ---
-unsigned long myChannelNumber = 3365151; 
+// --- Canal "IoT Prtuebas" ---
 const char * myWriteAPIKey = TS_WRITE_API_KEY;
 
 // --- Pines ---
@@ -43,14 +42,6 @@ WiFiClientSecure client;
 void setup() {
   Serial.begin(115200);
 
-  // Descongelar Pines Al Despertar
-  // Cuando el ESP32 despierta, los pines siguen "bloqueados" en su último estado. 
-  // Hay que liberarlos para poder cambiar su valor si la inundación ya bajó.
-  gpio_hold_dis((gpio_num_t)LED_VRD);
-  gpio_hold_dis((gpio_num_t)LED_RJO);
-  gpio_hold_dis((gpio_num_t)BUZZ);
-  gpio_deep_sleep_hold_dis();
-
   pinMode(LED_VRD, OUTPUT);
   pinMode(LED_RJO, OUTPUT);
   pinMode(BUZZ, OUTPUT);
@@ -60,20 +51,35 @@ void setup() {
   pinMode(DIP_1, INPUT_PULLDOWN);
   pinMode(DIP_2, INPUT_PULLDOWN);
 
-  // Conexión WiFi
+  // Conexión WiFi con TimeOut
   Serial.print("Conectando a WiFi...");
   WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
+
+  int intentos = 0;
+  // Intenta conectar por un máximo de 10 segundos (20 intentos de 500ms)
+  while (WiFi.status() != WL_CONNECTED && intentos < 20) {
     delay(500);
     Serial.print(".");
+    intentos++;
   }
-  Serial.println("\n¡Conectado a WiFi!");
 
-  // Configuramos el cliente para usar HTTPS (TLS/SSL)
-  client.setInsecure(); // Para fines académicos, acepta el certificado de ThingSpeak sin validarlo localmente
+  // Verifica si logró conectarse o se agotó el tiempo
+  if(WiFi.status() == WL_CONNECTED) {
+    Serial.println("\n¡Conectado a WiFi!");
+    // Configuramos el cliente para usar HTTPS (TLS/SSL)
+    client.setInsecure(); // Para fines académicos, acepta el certificado de ThingSpeak sin validarlo localmente
+  } else {
+    Serial.println("\n[ADVERTENCIA] Sin internet. Ejecutando solo modo local (Edge Computing).");
+  }
+
+  // Descongelar Pines Al Despertar
+  // Cuando el ESP32 despierta, los pines siguen "bloqueados" en su último estado. 
+  // Hay que liberarlos para poder cambiar su valor si la inundación ya bajó.
+  gpio_hold_dis((gpio_num_t)LED_VRD);
+  gpio_hold_dis((gpio_num_t)LED_RJO);
+  gpio_hold_dis((gpio_num_t)BUZZ);
+  gpio_deep_sleep_hold_dis();
   
-  // Iniciar cliente ThingSpeak
-  ThingSpeak.begin(client);
   esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
 }
 
@@ -117,7 +123,7 @@ void loop() {
   Serial.print(Altitud_agua);
   Serial.println(" cm");
 
-  // Edge Computing (Lógica de Alerta Local)
+  // Edge Computing (Lógica de Alerta Local) : Se ejecuta aunque no haya internet
   if(Altitud_agua>=Distancia_segura){
     digitalWrite(LED_VRD, LOW); // Apaga Seguro
     digitalWrite(LED_RJO, HIGH); // Enciende Alerta
@@ -130,17 +136,27 @@ void loop() {
     Serial.println("Estado: SEGURO");
   }
 
-  // Preparar paquete de ThingSpeak dinámico
-  ThingSpeak.setField(field_cm, Altitud_agua);
-  ThingSpeak.setField(field_st, digitalRead(LED_RJO));
+  // Envío a la nube condicionado al WiFi
+  if(WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
 
-  // Enviar datos a la nube
-  int codigoHTTP = ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
-  
-  if(codigoHTTP == 200) {
-    Serial.println("Datos enviados a ThingSpeak exitosamente.");
+    // Armamos la URL estructurada inyectando las variables dinámicas
+    String url = "https://api.thingspeak.com/update?api_key=" + String(myWriteAPIKey) + 
+                 "&field" + String(field_cm) + "=" + String(Altitud_agua) + 
+                 "&field" + String(field_st) + "=" + String(digitalRead(LED_RJO));
+
+    Serial.println("Enviando por HTTPS...");
+    http.begin(client, url); // Inicia conexión cifrada
+    int codigoHTTP = http.GET(); // Dispara la petición
+    
+    if(codigoHTTP > 0) { // Mayor a 0 significa que hubo respuesta del servidor
+      Serial.println("Datos enviados exitosamente. Código HTTP: " + String(codigoHTTP));
+    } else {
+      Serial.println("Error en la conexión segura. Código HTTP: " + String(codigoHTTP));
+    }
+    http.end(); // Libera la memoria
   } else {
-    Serial.println("Error enviando datos. Código HTTP: " + String(codigoHTTP));
+    Serial.println("Sin conexión de red. Dato no enviado a la nube, priorizando seguridad local.");
   }
 
   // CONGELAR PINES (Flip-Flop por Software)
