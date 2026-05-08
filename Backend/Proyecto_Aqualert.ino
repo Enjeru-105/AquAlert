@@ -1,6 +1,7 @@
 #include <WiFi.h>
 #include <ThingSpeak.h>
 #include "config.h"
+#include <WiFiClientSecure.h>
 
 // --- Configuración de Tiempos para Deep Sleep ---
 #define uS_TO_S_FACTOR 1000000ULL  
@@ -28,7 +29,6 @@ const int BUZZ = 15; // Pin del Buzzer
 // el sensor teóricamente se coloca a 4 metros del suelo
 // Para el proyecto dividimos esa cifra entre 10 = 40cm
 // la distancia segura real son 50cm, entonces usaremos 5cm
-
 const float Altura_sensor = 40.0; //cm
 const float Distancia_segura = 5.0; //cm
 
@@ -37,7 +37,8 @@ float Altitud_agua;
 int field_cm;
 int field_st;
 
-WiFiClient client;
+// Implementación de un cliente wifi seguro
+WiFiClientSecure client;
 
 void setup() {
   Serial.begin(115200);
@@ -67,6 +68,9 @@ void setup() {
     Serial.print(".");
   }
   Serial.println("\n¡Conectado a WiFi!");
+
+  // Configuramos el cliente para usar HTTPS (TLS/SSL)
+  client.setInsecure(); // Para fines académicos, acepta el certificado de ThingSpeak sin validarlo localmente
   
   // Iniciar cliente ThingSpeak
   ThingSpeak.begin(client);
