@@ -1,9 +1,9 @@
-// Coordenadas aproximadas para los pines en el iframe
+// Coordenadas calculadas para el nuevo nivel de zoom (bbox)
 const positions = {
-    1: { x: 38, y: 65 }, // Plaza del Sol
-    2: { x: 30, y: 35 }, // Plaza Patria
-    3: { x: 60, y: 55 }, // Paso Washington
-    4: { x: 65, y: 75 }  // Zona Industrial
+    1: { x: 25, y: 75 }, // Plaza del Sol (Abajo a la izquierda)
+    2: { x: 45, y: 15 }, // Plaza Patria (Arriba al centro-izquierda)
+    3: { x: 75, y: 60 }, // Paso Washington (Centro-derecha)
+    4: { x: 88, y: 85 }  // Zona Industrial (Abajo a la derecha)
 };
 
 // 1. AÑADIDO: Memoria global para guardar el último estado válido de cada sensor

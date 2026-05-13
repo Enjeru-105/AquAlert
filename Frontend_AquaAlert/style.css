@@ -63,21 +63,19 @@ body {
 
 /* --- Mapa --- */
 .map-section {
-    flex: 7; /* 70% del ancho */
+    flex: 7; 
     position: relative;
     background-color: #cbd5e1;
+    overflow: hidden; /* 🔥 ESTO ES CLAVE: Esconde todo lo que se salga del borde */
 }
 
 .map-iframe {
-    width: 100%;
-    height: 100%;
+    width: 105%; /* 🔥 Hacemos el iframe 5% más ancho */
+    height: 105%; /* 🔥 Y 5% más alto */
+    margin-top: -15px; /* 🔥 Lo empujamos hacia arriba para esconder la barra superior */
+    margin-left: -15px; /* 🔥 Lo empujamos a la izquierda para centrarlo */
     border: none;
-}
-
-.markers-container {
-    position: absolute;
-    inset: 0;
-    pointer-events: none; /* Permite arrastrar el mapa debajo */
+    pointer-events: none; 
 }
 
 /* --- Panel Lateral (Sidebar) --- */
