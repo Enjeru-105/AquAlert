@@ -1,4 +1,0 @@
-Aquí se guardará el .cpp y demás archivos respectivos al backend:
-- Programación de la ESP32
-- Preparación de ThingSpeak
-- Protoboard 
