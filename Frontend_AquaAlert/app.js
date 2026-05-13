@@ -1,9 +1,9 @@
-// Coordenadas calculadas para el nuevo nivel de zoom (bbox)
+// Coordenadas reales ajustadas al mapa de OpenStreetMap
 const positions = {
-    1: { x: 25, y: 75 }, // Plaza del Sol (Abajo a la izquierda)
-    2: { x: 45, y: 15 }, // Plaza Patria (Arriba al centro-izquierda)
-    3: { x: 75, y: 60 }, // Paso Washington (Centro-derecha)
-    4: { x: 88, y: 85 }  // Zona Industrial (Abajo a la derecha)
+    1: { x: 48, y: 66 }, // Plaza del Sol (López Mateos y Mariano Otero - Suroeste)
+    2: { x: 56, y: 27 }, // Plaza Patria (Patria y Américas - Norte, cerca de Zapopan)
+    3: { x: 58, y: 55 }, // Paso Washington (8 de Julio y Washington - Centro Sur)
+    4: { x: 67, y: 75 }  // Zona Industrial (Lázaro Cárdenas y Gob. Curiel - Sureste)
 };
 
 // 1. AÑADIDO: Memoria global para guardar el último estado válido de cada sensor

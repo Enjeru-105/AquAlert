@@ -66,14 +66,15 @@ body {
     flex: 7; 
     position: relative;
     background-color: #cbd5e1;
-    overflow: hidden; /* 🔥 ESTO ES CLAVE: Esconde todo lo que se salga del borde */
+    overflow: hidden; /* 🔥 Súper importante: Esto actúa como unas tijeras para cortar lo que sobre */
 }
 
 .map-iframe {
-    width: 105%; /* 🔥 Hacemos el iframe 5% más ancho */
-    height: 105%; /* 🔥 Y 5% más alto */
-    margin-top: -15px; /* 🔥 Lo empujamos hacia arriba para esconder la barra superior */
-    margin-left: -15px; /* 🔥 Lo empujamos a la izquierda para centrarlo */
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: calc(100% + 50px); /* 🔥 El truco: Hacemos el mapa 50 pixeles más ancho */
+    height: 100%;
     border: none;
     pointer-events: none; 
 }
