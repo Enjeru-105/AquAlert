@@ -6,20 +6,43 @@ const positions = {
     4: { x: 65, y: 75 }  // Zona Industrial
 };
 
+// 1. AÑADIDO: Memoria global para guardar el último estado válido de cada sensor
+// Esto evita que ThingSpeak borre alertas si envía un dato "null"
+let memoriaSensores = {
+    1: { nivel: 0, bandera: 0 },
+    2: { nivel: 0, bandera: 0 },
+    3: { nivel: 0, bandera: 0 },
+    4: { nivel: 0, bandera: 0 }
+};
+
 // Función principal de consumo
 async function fetchThingSpeakData() {
     try {
-        const response = await fetch('https://api.thingspeak.com/channels/3365151/feeds.json?results=1');
+        const response = await fetch('https://api.thingspeak.com/channels/3365151/feeds.json?api_key=VVEWULW97F5B6FL9&results=1');
         const json = await response.json();
 
         if (json.feeds && json.feeds.length > 0) {
             const ultimoDato = json.feeds[0];
 
+            // 2. AÑADIDO: Actualizamos la memoria SOLO si el dato nuevo no es nulo
+            if (ultimoDato.field1 !== null) memoriaSensores[1].nivel = ultimoDato.field1;
+            if (ultimoDato.field2 !== null) memoriaSensores[1].bandera = ultimoDato.field2;
+            
+            if (ultimoDato.field3 !== null) memoriaSensores[2].nivel = ultimoDato.field3;
+            if (ultimoDato.field4 !== null) memoriaSensores[2].bandera = ultimoDato.field4;
+            
+            if (ultimoDato.field5 !== null) memoriaSensores[3].nivel = ultimoDato.field5;
+            if (ultimoDato.field6 !== null) memoriaSensores[3].bandera = ultimoDato.field6;
+            
+            if (ultimoDato.field7 !== null) memoriaSensores[4].nivel = ultimoDato.field7;
+            if (ultimoDato.field8 !== null) memoriaSensores[4].bandera = ultimoDato.field8;
+
+            // 3. MODIFICADO: Usamos los datos de la memoria en lugar de los crudos de ThingSpeak
             const sensores = [
-                crearObjetoSensor(1, 'Plaza del Sol', ultimoDato.field1, ultimoDato.field2),
-                crearObjetoSensor(2, 'Plaza Patria', ultimoDato.field3, ultimoDato.field4),
-                crearObjetoSensor(3, 'Paso Washington', ultimoDato.field5, ultimoDato.field6),
-                crearObjetoSensor(4, 'Zona Industrial', ultimoDato.field7, ultimoDato.field8)
+                crearObjetoSensor(1, 'Plaza del Sol', memoriaSensores[1].nivel, memoriaSensores[1].bandera),
+                crearObjetoSensor(2, 'Plaza Patria', memoriaSensores[2].nivel, memoriaSensores[2].bandera),
+                crearObjetoSensor(3, 'Paso Washington', memoriaSensores[3].nivel, memoriaSensores[3].bandera),
+                crearObjetoSensor(4, 'Zona Industrial', memoriaSensores[4].nivel, memoriaSensores[4].bandera)
             ];
 
             actualizarInterfaz(sensores);
