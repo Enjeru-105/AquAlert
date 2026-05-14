@@ -1,12 +1,22 @@
-// Coordenadas reales ajustadas al mapa de OpenStreetMap
+// Coordenadas GPS Reales de la ZMG [Latitud, Longitud]
 const positions = {
-    1: { x: 48, y: 66 }, // Plaza del Sol (López Mateos y Mariano Otero - Suroeste)
-    2: { x: 56, y: 27 }, // Plaza Patria (Patria y Américas - Norte, cerca de Zapopan)
-    3: { x: 58, y: 55 }, // Paso Washington (8 de Julio y Washington - Centro Sur)
-    4: { x: 67, y: 75 }  // Zona Industrial (Lázaro Cárdenas y Gob. Curiel - Sureste)
+    1: [20.649561, -103.400981], // Plaza del Sol
+    2: [20.712735, -103.376070], // Plaza Patria
+    3: [20.662155, -103.366960], // Paso Washington
+    4: [20.632716, -103.350611]  // Zona Industrial
 };
 
-// 1. AÑADIDO: Memoria global para guardar el último estado válido de cada sensor
+// Inicializar el mapa de Leaflet en Guadalajara
+const map = L.map('mapa-gdl').setView([20.67, -103.37], 12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap'
+}).addTo(map);
+
+// Objeto para guardar los marcadores físicos del mapa
+let markersLeaflet = {};
+
+// Memoria global para guardar el último estado válido de cada sensor
 // Esto evita que ThingSpeak borre alertas si envía un dato "null"
 let memoriaSensores = {
     1: { nivel: 0, bandera: 0 },
@@ -18,24 +28,27 @@ let memoriaSensores = {
 // Función principal de consumo
 async function fetchThingSpeakData() {
     try {
-        const response = await fetch('https://api.thingspeak.com/channels/3365151/feeds.json?api_key=VVEWULW97F5B6FL9&results=1');
+        // Pedimos los últimos 20 resultados en lugar de 1
+        const response = await fetch('https://api.thingspeak.com/channels/3365151/feeds.json?api_key=VVEWULW97F5B6FL9&results=20');
         const json = await response.json();
 
         if (json.feeds && json.feeds.length > 0) {
-            const ultimoDato = json.feeds[0];
-
-            // 2. AÑADIDO: Actualizamos la memoria SOLO si el dato nuevo no es nulo
-            if (ultimoDato.field1 !== null) memoriaSensores[1].nivel = ultimoDato.field1;
-            if (ultimoDato.field2 !== null) memoriaSensores[1].bandera = ultimoDato.field2;
-            
-            if (ultimoDato.field3 !== null) memoriaSensores[2].nivel = ultimoDato.field3;
-            if (ultimoDato.field4 !== null) memoriaSensores[2].bandera = ultimoDato.field4;
-            
-            if (ultimoDato.field5 !== null) memoriaSensores[3].nivel = ultimoDato.field5;
-            if (ultimoDato.field6 !== null) memoriaSensores[3].bandera = ultimoDato.field6;
-            
-            if (ultimoDato.field7 !== null) memoriaSensores[4].nivel = ultimoDato.field7;
-            if (ultimoDato.field8 !== null) memoriaSensores[4].bandera = ultimoDato.field8;
+            // Recorremos los 20 resultados, del más viejo al más nuevo.
+            // Así nos aseguramos de atrapar el último dato válido de cada sensor,
+            // llenando correctamente la memoria desde la primera carga.
+            json.feeds.forEach(dato => {
+                if (dato.field1 !== null) memoriaSensores[1].nivel = dato.field1;
+                if (dato.field2 !== null) memoriaSensores[1].bandera = dato.field2;
+                
+                if (dato.field3 !== null) memoriaSensores[2].nivel = dato.field3;
+                if (dato.field4 !== null) memoriaSensores[2].bandera = dato.field4;
+                
+                if (dato.field5 !== null) memoriaSensores[3].nivel = dato.field5;
+                if (dato.field6 !== null) memoriaSensores[3].bandera = dato.field6;
+                
+                if (dato.field7 !== null) memoriaSensores[4].nivel = dato.field7;
+                if (dato.field8 !== null) memoriaSensores[4].bandera = dato.field8;
+            });
 
             // 3. MODIFICADO: Usamos los datos de la memoria en lugar de los crudos de ThingSpeak
             const sensores = [
@@ -54,7 +67,8 @@ async function fetchThingSpeakData() {
 }
 
 function crearObjetoSensor(id, name, fieldNivel, fieldBandera) {
-    const nivel = parseInt(fieldNivel) || 0;
+    // Multiplicamos por 10 para revertir la escala de tu maqueta.
+    const nivel = (parseInt(fieldNivel) || 0) * 10;
     const hayAlerta = parseInt(fieldBandera) === 1;
     return {
         id: id,
@@ -68,31 +82,41 @@ function crearObjetoSensor(id, name, fieldNivel, fieldBandera) {
 }
 
 function actualizarInterfaz(sensores) {
-    const markersContainer = document.getElementById('map-markers');
     const alertsList = document.getElementById('alerts-list');
-    
-    markersContainer.innerHTML = '';
     alertsList.innerHTML = '';
 
     sensores.forEach(sensor => {
-        // Asignar clases puras dependiendo del estado
         const markerClass = sensor.alert ? 'marker-danger' : 'marker-safe';
         const cardClass = sensor.alert ? 'card-danger' : 'card-safe';
         const iconName = sensor.alert ? 'alert-triangle' : 'check-circle-2';
 
-        // 1. Inyectar Marcador
+        // --- 1. LÓGICA DEL MAPA (LEAFLET) ---
+        // Generamos el HTML de tu marcador de siempre
         const markerHTML = `
             <div class="map-marker ${markerClass}"
-                 style="left: ${sensor.position.x}%; top: ${sensor.position.y}%;"
                  onmouseenter="mostrarTooltip('${sensor.name}', ${sensor.level}, '${sensor.status}', ${sensor.alert})"
                  onmouseleave="ocultarTooltip()">
                 <i data-lucide="map-pin" class="marker-icon"></i>
                 <div class="marker-dot"></div>
             </div>
         `;
-        markersContainer.innerHTML += markerHTML;
 
-        // 2. Inyectar Tarjeta
+        // Le decimos a Leaflet que use tu HTML personalizado como icono
+        const customIcon = L.divIcon({
+            html: markerHTML,
+            className: '', // Quita el borde blanco por defecto de Leaflet
+            iconSize: [40, 40],
+            iconAnchor: [20, 40] // Ancla la "punta" del icono justo en la calle
+        });
+
+        // Si el marcador no existe en el mapa, lo creamos. Si ya existe, lo actualizamos.
+        if (!markersLeaflet[sensor.id]) {
+            markersLeaflet[sensor.id] = L.marker(sensor.position, {icon: customIcon}).addTo(map);
+        } else {
+            markersLeaflet[sensor.id].setIcon(customIcon);
+        }
+
+        // --- 2. LÓGICA DE LA LISTA LATERAL (Queda igual) ---
         const cardHTML = `
             <div class="sensor-card ${cardClass}">
                 <h3>${sensor.name}</h3>

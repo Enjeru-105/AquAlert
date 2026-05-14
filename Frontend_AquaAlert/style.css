@@ -69,16 +69,6 @@ body {
     overflow: hidden; /* 🔥 Súper importante: Esto actúa como unas tijeras para cortar lo que sobre */
 }
 
-.map-iframe {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: calc(100% + 50px); /* 🔥 El truco: Hacemos el mapa 50 pixeles más ancho */
-    height: 100%;
-    border: none;
-    pointer-events: none; 
-}
-
 /* --- Panel Lateral (Sidebar) --- */
 .sidebar {
     flex: 3; /* 30% del ancho */
@@ -173,13 +163,11 @@ body {
 
 /* --- Marcadores del Mapa --- */
 .map-marker {
-    position: absolute;
-    cursor: pointer;
-    pointer-events: auto;
-    transform: translate(-50%, -50%);
     display: flex;
     flex-direction: column;
     align-items: center;
+    cursor: pointer;
+    pointer-events: auto;
 }
 
 .marker-icon {

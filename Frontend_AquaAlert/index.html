@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AquAlert GDL</title>
@@ -21,18 +26,9 @@
     <main class="app-container">
         <!-- Sección del Mapa -->
         <section class="map-section">
-            <iframe
-                src="https://www.openstreetmap.org/export/embed.html?bbox=-103.45%2C20.63%2C-103.33%2C20.72&layer=mapnik" 
-                width="100%" height="100%" style="pointer-events: none; border: none;"
-                class="map-iframe"
-                title="Mapa de Guadalajara">
-            </iframe>
-            
-            <!-- Contenedor dinámico de marcadores -->
-            <div id="map-markers" class="markers-container"></div>
+            <div id="mapa-gdl" style="width: 100%; height: 100%; z-index: 1;"></div>
 
-             <!-- Tooltip -->
-            <div id="tooltip" class="tooltip hidden">
+             <div id="tooltip" class="tooltip hidden" style="z-index: 1000;">
                 <p id="tt-name" class="tt-title"></p>
                 <p id="tt-level" class="tt-text"></p>
                 <p id="tt-status" class="tt-badge"></p>
@@ -56,11 +52,11 @@
                 <h3>LEYENDA</h3>
                 <div class="legend-item">
                     <div class="legend-dot dot-safe"></div>
-                    <span>Seguro (< 30 cm)</span>
+                    <span>Seguro (< 50 cm)</span>
                 </div>
                 <div class="legend-item">
                     <div class="legend-dot dot-danger"></div>
-                    <span>Peligro (> 30 cm)</span>
+                    <span>Peligro (> 50 cm)</span>
                 </div>
             </div>
         </aside>
